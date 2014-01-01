@@ -24,32 +24,48 @@ function Minefield(width, height) {
 
     this.isMined = function(x, y) {
         var i = this._coordToIndex(x, y);
-        return (_grid[i] & 1) == 1;
+        return (_grid[i] & 16) != 0;
     }
 
     this.isFlagged = function(x, y) {
         var i = this._coordToIndex(x, y);
-        return (_grid[i] & 2) == 2;
+        return (_grid[i] & 32) != 0;
     }
 
     this.isRevealed = function(x, y) {
         var i = this._coordToIndex(x, y);
-        return (_grid[i] & 4) == 4;
+        return (_grid[i] & 128) != 0;
+    }
+
+    /**
+     * Returns the number (as in number of adjacent mines) at the specified
+     * location, or -1 if it contains not a number.
+     */
+    this.getNumber = function(x, y) {
+        var i = this._coordToIndex(x, y);
+        if ((_grid[i] & 64) == 0) return -1;
+        return (_grid[i] & 15);
     }
 
     this.setMined = function(x, y, mined) {
         var i = this._coordToIndex(x, y);
-        _grid[i] = (mined) ? _grid[i] | 1 : _grid[i] & ~1;
+        _grid[i] = (mined) ? _grid[i] | 16 : _grid[i] & ~16;
     }
 
     this.setFlagged = function(x, y, flagged) {
         var i = this._coordToIndex(x, y);
-        _grid[i] = (flagged) ? _grid[i] | 2 : _grid[i] & ~2;
+        _grid[i] = (flagged) ? _grid[i] | 32 : _grid[i] & ~32;
     }
 
     this.setRevealed = function(x, y, revealed) {
         var i = this._coordToIndex(x, y);
-        _grid[i] = (revealed) ? _grid[i] | 4 : _grid[i] & ~4;
+        _grid[i] = (revealed) ? _grid[i] | 128 : _grid[i] & ~128;
+    }
+
+    this.setNumber = function(x, y, number) {
+        var i = this._coordToIndex(x, y);
+        _grid[i] &= 240; // Clear the four rightmost bits
+        _grid[i] |= ((number & 15) | 64);
     }
 
     this._coordToIndex = function(x, y) {
@@ -67,54 +83,54 @@ function GameCanvas(canvas, width, height, blockSize) {
 
     _canvas.width = width * blockSize;
     _canvas.height = height * blockSize;
+    _context.font = 'bold 20px Arial';
 
-    this._fillBox = function(x, y, color) {
+    this.getStupidMf = function() {
+        return _minefield;
+    }
+
+    this.getStupidGrid = function() {
+        return _minefield.getGrid();
+    }
+
+    this._fillColor = function(x, y, color) {
         _context.fillStyle = color;
         _context.fillRect(x * blockSize, y * blockSize,
                 blockSize, blockSize);
     }
 
-    this.draw = function() {
-        for (var i = 0; i < _minefield.getHeight(); i++) {
-            for (var j = 0; j < _minefield.getWidth(); j++) {
-                if (_minefield.isFlagged(j, i) && !_minefield.isRevealed(j, i))
-                    this._fillBox(j, i, 'blue');
-/*
-                var state = _minefield.getState(j, i);
-                switch (state) {
-                    // Not revealed, no mine, no flag
-                    case 0:
+    this._fillText = function(x, y, text, color) {
+        _context.fillStyle = color;
+        _context.fillText(text,
+                x * blockSize + 10,
+                y * blockSize + 20);
+        console.log('just filled some text bro: ' + text);
+    }
 
-                        break;
-
-                    // Not revealed, mine, no flag
-                    case 1:
-
-                        break;
-
-                    // Not revealed, no mine, flag
-                    case 2:
-
-                        break;
-
-                    // Not revealed, mine, flag
-                    case 3:
-
-                        break;
-
-                    // Revealed, no mine, no flag
-                    case 4:
-
-                        break;
-
-                    // Revealed, mine, no flag
-                    case 6:
-
-                        break;
-                }
-*/
+    this._drawBlock = function(x, y) {
+        if (_minefield.isRevealed(x, y)) {
+            if (_minefield.isMined(x, y)) {
+                this._fillColor(x, y, 'red');
+            } else {
+                this._fillColor(x, y, 'white');
+                var number = _minefield.getNumber(x, y);
+                if (number != -1)
+                    this._fillText(x, y, number, 'green');
             }
+        } else if (_minefield.isFlagged(x, y)) {
+            this._fillColor(x, y, 'blue');
         }
+    }
+
+    this.draw = function() {
+        // Clear the canvas
+        // _canvas.width = _canvas.width;
+        _context.fillStyle = 'grey';
+        _context.fillRect(0, 0, _canvas.width, _canvas.height);
+
+        for (var i = 0; i < _minefield.getHeight(); i++)
+            for (var j = 0; j < _minefield.getWidth(); j++)
+                this._drawBlock(j, i);
 
         // Vertical lines
         for (var i = 1; i < _minefield.getWidth(); i++) {
@@ -139,5 +155,7 @@ function GameCanvas(canvas, width, height, blockSize) {
 
 var canvas = new GameCanvas(document.getElementById('gameCanvas'),
         10, 10, 30);
+var g = canvas.getStupidGrid();
+var mf = canvas.getStupidMf();
 canvas.draw();
 
