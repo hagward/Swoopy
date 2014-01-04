@@ -1,3 +1,7 @@
+/**
+ * Represents a minefield and supports flagging, numbering and revealing of
+ * cells. Contains no game logic.
+ */
 function Minefield(width, height) {
 
     var _width = width;
@@ -74,40 +78,45 @@ function Minefield(width, height) {
 
 }
 
-function GameCanvas(canvas, width, height, blockSize) {
+/**
+ * Represents the visual minefield.
+ */
+function GameCanvas(canvas, minefield, cellSize) {
  
     var _canvas = canvas;
     var _context = canvas.getContext("2d");
-    var _blockSize = blockSize;
-    var _minefield = new Minefield(width, height);
+    var _minefield = minefield;
+    var _cellSize = cellSize;
 
-    _canvas.width = width * blockSize;
-    _canvas.height = height * blockSize;
+    _canvas.width = _minefield.getWidth() * cellSize;
+    _canvas.height = _minefield.getHeight() * cellSize;
     _context.font = 'bold 20px Arial';
 
-    this.getStupidMf = function() {
-        return _minefield;
-    }
-
-    this.getStupidGrid = function() {
-        return _minefield.getGrid();
-    }
-
+    /**
+     * Fills a cell with a color.
+     */
     this._fillColor = function(x, y, color) {
         _context.fillStyle = color;
-        _context.fillRect(x * blockSize, y * blockSize,
-                blockSize, blockSize);
+        _context.fillRect(x * cellSize, y * cellSize,
+                cellSize, cellSize);
     }
 
+    /**
+     * Writes text to the center of a cell.
+     */
     this._fillText = function(x, y, text, color) {
         _context.fillStyle = color;
         _context.fillText(text,
-                x * blockSize + 10,
-                y * blockSize + 20);
+                x * cellSize + 10,
+                y * cellSize + 20);
         console.log('just filled some text bro: ' + text);
     }
 
-    this._drawBlock = function(x, y) {
+    /**
+     * Draws to a cell according to the contents of the respective cell in the
+     * Minefield class.
+     */
+    this.drawCell = function(x, y) {
         if (_minefield.isRevealed(x, y)) {
             if (_minefield.isMined(x, y)) {
                 this._fillColor(x, y, 'red');
@@ -125,16 +134,17 @@ function GameCanvas(canvas, width, height, blockSize) {
     this.draw = function() {
         // Clear the canvas
         // _canvas.width = _canvas.width;
+
         _context.fillStyle = 'grey';
         _context.fillRect(0, 0, _canvas.width, _canvas.height);
 
         for (var i = 0; i < _minefield.getHeight(); i++)
             for (var j = 0; j < _minefield.getWidth(); j++)
-                this._drawBlock(j, i);
+                this._drawCell(j, i);
 
         // Vertical lines
         for (var i = 1; i < _minefield.getWidth(); i++) {
-            var x = i * blockSize;
+            var x = i * cellSize;
             _context.beginPath();
             _context.moveTo(x, 0);
             _context.lineTo(x, _canvas.height);
@@ -143,7 +153,7 @@ function GameCanvas(canvas, width, height, blockSize) {
 
         // Horizontal lines
         for (var i = 1; i < _minefield.getHeight(); i++) {
-            var y = i * blockSize;
+            var y = i * cellSize;
             _context.beginPath();
             _context.moveTo(0, y);
             _context.lineTo(_canvas.width, y);
@@ -153,9 +163,65 @@ function GameCanvas(canvas, width, height, blockSize) {
 
 }
 
-var canvas = new GameCanvas(document.getElementById('gameCanvas'),
-        10, 10, 30);
-var g = canvas.getStupidGrid();
-var mf = canvas.getStupidMf();
-canvas.draw();
+/**
+ * Contains all the game logic.
+ */
+function Swoopy(minefield, gameCanvas) {
+
+    var _minefield = minefield;
+    var _gameCanvas = gameCanvas;
+    var _minesLeft = 0;
+
+    // -1 = lost, 0 = playing, 1 = won
+    var _gameState = 0;
+
+    this.initBoard = function(numMines) {
+        _minesLeft = numMines;
+
+        // TODO: randomly distribute the mines across the board
+    }
+
+    this.reveal = function(x, y) {
+        if (_minefield.isRevealed(x, y) || _minefield.isFlagged(x, y))
+            return;
+
+        _minefield.setRevealed(x, y);
+
+        if (_minefield.isMined(x, y)) {
+            _gameState = -1;
+            return;
+        }
+
+        if (_minefield.getNumber(x, y) == -1)
+            this._bfsReveal(x, y);
+    }
+
+    this._bfsReveal = function(x, y) {
+        // TODO: BFS all the adjacent, empty cells
+    }
+
+    this.flag = function(x, y) {
+        if (_minefield.isRevealed(x, y))
+            return;
+
+        var flagged = _minefield.isFlagged(x, y);
+        _minefield.setFlagged(x, y, !flagged);
+    }
+
+    this.getGameState = function() {
+        return this._gameState;
+    }
+
+    this.getMinesLeft = function() {
+        return this._minesLeft;
+    }
+
+}
+
+var canvas = document.getElementById('gameCanvas');
+
+var minefield = new Minefield(10, 10);
+var gameCanvas = new GameCanvas(canvas, minefield, 30);
+
+gameCanvas.draw();
 
