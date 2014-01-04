@@ -1,6 +1,5 @@
 /**
- * Represents a minefield and supports flagging, numbering and revealing of
- * cells. Contains no game logic.
+ * Datastructure for storing and accessing a minefield.
  */
 function Minefield(width, height) {
 
@@ -43,11 +42,11 @@ function Minefield(width, height) {
 
     /**
      * Returns the number (as in number of adjacent mines) at the specified
-     * location, or -1 if it contains not a number.
+     * location.
      */
     this.getNumber = function(x, y) {
         var i = this._coordToIndex(x, y);
-        if ((_grid[i] & 64) == 0) return -1;
+        if ((_grid[i] & 64) == 0) return 0;
         return (_grid[i] & 15);
     }
 
@@ -81,23 +80,50 @@ function Minefield(width, height) {
 /**
  * Represents the visual minefield.
  */
-function GameCanvas(canvas, minefield, cellSize) {
+function GameCanvas(gameCanvas, gridCanvas, minefield, cellSize) {
  
-    var _canvas = canvas;
-    var _context = canvas.getContext("2d");
+    var _gameCanvas = gameCanvas;
+    var _gridCanvas = gridCanvas;
+    var _gameContext = gameCanvas.getContext("2d");
+    var _gridContext = gridCanvas.getContext("2d");
     var _minefield = minefield;
     var _cellSize = cellSize;
 
-    _canvas.width = _minefield.getWidth() * cellSize;
-    _canvas.height = _minefield.getHeight() * cellSize;
-    _context.font = 'bold 20px Arial';
+    _gameCanvas.width = _minefield.getWidth() * cellSize;
+    _gameCanvas.height = _minefield.getHeight() * cellSize;
+    _gameCanvas.style.marginLeft = (-_gameCanvas.width / 2) + 'px';
+    _gameContext.font = '20px sans-serif';
+    _gameCanvas.style.border = '2px solid black';
+
+    _gridCanvas.width = _gameCanvas.width;
+    _gridCanvas.height = _gameCanvas.height;
+    _gridCanvas.style.marginLeft = _gameCanvas.style.marginLeft;
+    _gridCanvas.style.border = '2px solid black';
+
+    // Vertical lines
+    for (var i = 1; i < _minefield.getWidth(); i++) {
+        var x = i * cellSize;
+        _gridContext.beginPath();
+        _gridContext.moveTo(x, 0);
+        _gridContext.lineTo(x, _gameCanvas.height);
+        _gridContext.stroke();
+    }
+
+    // Horizontal lines
+    for (var i = 1; i < _minefield.getHeight(); i++) {
+        var y = i * cellSize;
+        _gridContext.beginPath();
+        _gridContext.moveTo(0, y);
+        _gridContext.lineTo(_gameCanvas.width, y);
+        _gridContext.stroke();
+    }
 
     /**
      * Fills a cell with a color.
      */
     this._fillColor = function(x, y, color) {
-        _context.fillStyle = color;
-        _context.fillRect(x * cellSize, y * cellSize,
+        _gameContext.fillStyle = color;
+        _gameContext.fillRect(x * cellSize, y * cellSize,
                 cellSize, cellSize);
     }
 
@@ -105,11 +131,10 @@ function GameCanvas(canvas, minefield, cellSize) {
      * Writes text to the center of a cell.
      */
     this._fillText = function(x, y, text, color) {
-        _context.fillStyle = color;
-        _context.fillText(text,
-                x * cellSize + 10,
-                y * cellSize + 20);
-        console.log('just filled some text bro: ' + text);
+        _gameContext.fillStyle = color;
+        _gameContext.fillText(text,
+                x * cellSize + 9,
+                y * cellSize + 22);
     }
 
     /**
@@ -123,7 +148,7 @@ function GameCanvas(canvas, minefield, cellSize) {
             } else {
                 this._fillColor(x, y, 'white');
                 var number = _minefield.getNumber(x, y);
-                if (number != -1)
+                if (number != 0)
                     this._fillText(x, y, number, 'green');
             }
         } else if (_minefield.isFlagged(x, y)) {
@@ -135,32 +160,14 @@ function GameCanvas(canvas, minefield, cellSize) {
 
     this.draw = function() {
         // Clear the canvas
-        // _canvas.width = _canvas.width;
+        // _gameCanvas.width = _gameCanvas.width;
 
-        _context.fillStyle = 'grey';
-        _context.fillRect(0, 0, _canvas.width, _canvas.height);
+        _gameContext.fillStyle = 'grey';
+        _gameContext.fillRect(0, 0, _gameCanvas.width, _gameCanvas.height);
 
-        for (var i = 0; i < _minefield.getHeight(); i++)
-            for (var j = 0; j < _minefield.getWidth(); j++)
-                this.drawCell(j, i);
-
-        // Vertical lines
-        for (var i = 1; i < _minefield.getWidth(); i++) {
-            var x = i * cellSize;
-            _context.beginPath();
-            _context.moveTo(x, 0);
-            _context.lineTo(x, _canvas.height);
-            _context.stroke();
-        }
-
-        // Horizontal lines
-        for (var i = 1; i < _minefield.getHeight(); i++) {
-            var y = i * cellSize;
-            _context.beginPath();
-            _context.moveTo(0, y);
-            _context.lineTo(_canvas.width, y);
-            _context.stroke();
-        }
+        // for (var i = 0; i < _minefield.getHeight(); i++)
+        //     for (var j = 0; j < _minefield.getWidth(); j++)
+        //         this.drawCell(j, i);
     }
 
 }
@@ -177,10 +184,52 @@ function Swoopy(minefield, gameCanvas) {
     // -1 = lost, 0 = playing, 1 = won
     var _gameState = 0;
 
-    this.initBoard = function(numMines) {
-        _minesLeft = numMines;
+    this.resetBoard = function(numMines) {
+        if (numMines > _minefield.getWidth() * _minefield.getHeight())
+            return;
 
-        // TODO: randomly distribute the mines across the board
+        _minesLeft = numMines;
+        _gameState = 0;
+
+        var leftToDistribute = numMines;
+        while (leftToDistribute > 0) {
+            var x = getRandomInt(0, _minefield.getWidth() - 1);
+            var y = getRandomInt(0, _minefield.getHeight() - 1);
+
+            if (_minefield.isMined(x, y))
+                continue;
+
+            _minefield.setMined(x, y, true);
+            console.log('Adding mine at: ' + x + ' ' + y);
+            this._mapToAdjacentCells(x, y, this._incrementMineNumber);
+            leftToDistribute--;
+            console.log();
+        }
+    }
+
+    /**
+     * Updates the mine numbers of the adjacent cells.
+     * TODO: Should this be located in Minefield instead?
+     */
+    this._mapToAdjacentCells = function(x, y, f) {
+        f(x - 1, y - 1);
+        f(x - 1, y);
+        f(x - 1, y + 1);
+        f(x, y - 1);
+        f(x, y + 1);
+        f(x + 1, y - 1);
+        f(x + 1, y);
+        f(x + 1, y + 1);
+    }
+
+    this._incrementMineNumber = function(x, y) {
+        if (x < 0 || x >= _minefield.getWidth()
+                || y < 0 || y >= _minefield.getHeight())
+            return;
+
+        var n = _minefield.getNumber(x, y);
+        _minefield.setNumber(x, y, n + 1);
+        console.log('Incrementing number at: ' + x + ' ' + y);
     }
 
     this.reveal = function(x, y) {
@@ -194,7 +243,7 @@ function Swoopy(minefield, gameCanvas) {
             return;
         }
 
-        if (_minefield.getNumber(x, y) == -1) {
+        if (_minefield.getNumber(x, y) == 0) {
             this._bfsReveal(x, y);
         } else {
             _minefield.setRevealed(x, y, true);
@@ -216,7 +265,9 @@ function Swoopy(minefield, gameCanvas) {
                     || y < 0 || y >= _minefield.getHeight())
                 continue;
 
-            if (!_minefield.isMined(x, y) && !_minefield.isRevealed(x, y)) {
+            if (!_minefield.isMined(x, y)
+                    && !_minefield.isFlagged(x, y)
+                    && !_minefield.isRevealed(x, y)) {
                 // Reveal if not mined and not already revealed
                 _minefield.setRevealed(x, y, true);
                 _gameCanvas.drawCell(x, y);
@@ -224,7 +275,7 @@ function Swoopy(minefield, gameCanvas) {
 
                 // Add adjacent cells to the end of the queue if current cell
                 // is blank
-                if (_minefield.getNumber(x, y) == -1) {
+                if (_minefield.getNumber(x, y) == 0) {
                     queue.push(x - 1, y - 1,
                                x - 1, y,
                                x - 1, y + 1,
@@ -246,8 +297,17 @@ function Swoopy(minefield, gameCanvas) {
             return;
 
         var flagged = _minefield.isFlagged(x, y);
+
+        if (!flagged && _minesLeft == 0) {
+            console.log('No mines left!');
+            return;
+        }
+
         _minefield.setFlagged(x, y, !flagged);
         _gameCanvas.drawCell(x, y);
+        _minesLeft += (flagged) ? 1 : -1;
+
+        console.log('Mines left: ' + _minesLeft);
     }
 
     this.getGameState = function() {
@@ -263,25 +323,41 @@ function Swoopy(minefield, gameCanvas) {
 var config = {
     width: 10,
     height: 10,
-    cellSize: 30
+    cellSize: 30,
+    numMines: 10
 };
 
-var canvas = document.getElementById('gameCanvas');
+var gameCanvas = document.getElementById('gameCanvas');
+var gridCanvas = document.getElementById('gridCanvas');
 
 var minefield = new Minefield(config.width, config.height);
-var gameCanvas = new GameCanvas(canvas, minefield, config.cellSize);
+var gameCanvas = new GameCanvas(gameCanvas, gridCanvas, minefield,
+        config.cellSize);
 var swoopy = new Swoopy(minefield, gameCanvas);
 
+swoopy.resetBoard(config.numMines);
 gameCanvas.draw();
 
-canvas.onmousedown = function(event) {
+// Left click for revealing
+gridCanvas.onclick = function(event) {
+    var cell = getCellFromEvent(event);
+    var x = cell[0];
+    var y = cell[1];
+
     console.log('mouse down at: ' + x + ' ' + y);
+    swoopy.reveal(x, y);
+}
+
+// Right click for flagging/unflagging
+gridCanvas.oncontextmenu = function(event) {
+    event.preventDefault();
 
     var cell = getCellFromEvent(event);
     var x = cell[0];
     var y = cell[1];
 
-    swoopy.reveal(x, y);
+    console.log('right click at: ' + x + ' ' + y);
+    swoopy.flag(x, y);
 }
 
 /**
@@ -300,13 +376,20 @@ function getCellFromEvent(event) {
         y = event.clientY + document.body.scrollTop
             + document.documentElement.scrollTop;
     }
-    x -= canvas.offsetLeft;
-    y -= canvas.offsetTop;
+    x -= gridCanvas.offsetLeft;
+    y -= gridCanvas.offsetTop;
 
     // Find block number
     x = Math.floor(x / config.cellSize);
     y = Math.floor(y / config.cellSize);
 
     return [x, y];
+}
+
+/**
+ * Helper function taken from MDN.
+ */
+function getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1) + min);
 }
 
