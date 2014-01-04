@@ -128,6 +128,8 @@ function GameCanvas(canvas, minefield, cellSize) {
             }
         } else if (_minefield.isFlagged(x, y)) {
             this._fillColor(x, y, 'blue');
+        } else {
+            this._fillColor(x, y, 'grey');
         }
     }
 
@@ -140,7 +142,7 @@ function GameCanvas(canvas, minefield, cellSize) {
 
         for (var i = 0; i < _minefield.getHeight(); i++)
             for (var j = 0; j < _minefield.getWidth(); j++)
-                this._drawCell(j, i);
+                this.drawCell(j, i);
 
         // Vertical lines
         for (var i = 1; i < _minefield.getWidth(); i++) {
@@ -185,19 +187,58 @@ function Swoopy(minefield, gameCanvas) {
         if (_minefield.isRevealed(x, y) || _minefield.isFlagged(x, y))
             return;
 
-        _minefield.setRevealed(x, y);
-
         if (_minefield.isMined(x, y)) {
+            _minefield.setRevealed(x, y, true);
             _gameState = -1;
+            _gameCanvas.drawCell(x, y);
             return;
         }
 
-        if (_minefield.getNumber(x, y) == -1)
+        if (_minefield.getNumber(x, y) == -1) {
             this._bfsReveal(x, y);
+        } else {
+            _minefield.setRevealed(x, y, true);
+            _gameCanvas.drawCell(x, y);
+        }
     }
 
     this._bfsReveal = function(x, y) {
-        // TODO: BFS all the adjacent, empty cells
+        // Push and pop two elements at the time
+        var queue = [x, y];
+
+        while (queue.length > 0) {
+            // Remove the first two elements from the queue
+            var x = queue.shift();
+            var y = queue.shift();
+
+            // Check that x and y is within boundaries
+            if (x < 0 || x >= _minefield.getWidth()
+                    || y < 0 || y >= _minefield.getHeight())
+                continue;
+
+            if (!_minefield.isMined(x, y) && !_minefield.isRevealed(x, y)) {
+                // Reveal if not mined and not already revealed
+                _minefield.setRevealed(x, y, true);
+                _gameCanvas.drawCell(x, y);
+                // console.log('bfs revealing: ' + x + ' ' + y);
+
+                // Add adjacent cells to the end of the queue if current cell
+                // is blank
+                if (_minefield.getNumber(x, y) == -1) {
+                    queue.push(x - 1, y - 1,
+                               x - 1, y,
+                               x - 1, y + 1,
+                               x, y - 1,
+                               x, y + 1,
+                               x + 1, y - 1,
+                               x + 1, y,
+                               x + 1, y + 1
+                    );
+                }
+            }
+        }
+
+        console.log('bfs complete!');
     }
 
     this.flag = function(x, y) {
@@ -206,6 +247,7 @@ function Swoopy(minefield, gameCanvas) {
 
         var flagged = _minefield.isFlagged(x, y);
         _minefield.setFlagged(x, y, !flagged);
+        _gameCanvas.drawCell(x, y);
     }
 
     this.getGameState = function() {
@@ -218,10 +260,53 @@ function Swoopy(minefield, gameCanvas) {
 
 }
 
+var config = {
+    width: 10,
+    height: 10,
+    cellSize: 30
+};
+
 var canvas = document.getElementById('gameCanvas');
 
-var minefield = new Minefield(10, 10);
-var gameCanvas = new GameCanvas(canvas, minefield, 30);
+var minefield = new Minefield(config.width, config.height);
+var gameCanvas = new GameCanvas(canvas, minefield, config.cellSize);
+var swoopy = new Swoopy(minefield, gameCanvas);
 
 gameCanvas.draw();
+
+canvas.onmousedown = function(event) {
+    console.log('mouse down at: ' + x + ' ' + y);
+
+    var cell = getCellFromEvent(event);
+    var x = cell[0];
+    var y = cell[1];
+
+    swoopy.reveal(x, y);
+}
+
+/**
+ * Returns the x and y values for the clicked block, based on a canvas.onclick
+ * event.
+ */
+function getCellFromEvent(event) {
+    // Find click position
+    var x, y;
+    if (event.pageX || event.pageY) {
+        x = event.pageX;
+        y = event.pageY;
+    } else {
+        x = event.clientX + document.body.scrollLeft
+            + document.documentElement.scrollLeft;
+        y = event.clientY + document.body.scrollTop
+            + document.documentElement.scrollTop;
+    }
+    x -= canvas.offsetLeft;
+    y -= canvas.offsetTop;
+
+    // Find block number
+    x = Math.floor(x / config.cellSize);
+    y = Math.floor(y / config.cellSize);
+
+    return [x, y];
+}
 
