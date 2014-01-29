@@ -5,9 +5,10 @@ function Minefield(width, height) {
 
     var _width = width;
     var _height = height;
-    var _grid = new Array(width * height);
+    var _numFlags = 0; // This might be redundant
+    var _grid = new Array(height);
     for (var i = 0; i < _grid.length; i++)
-        _grid[i] = 0;
+        _grid[i] = new Array(width);
 
     // Used for debugging purposes only. To be removed.
     this.getGrid = function() { return _grid; }
@@ -21,23 +22,19 @@ function Minefield(width, height) {
     }
 
     this.getState = function(x, y) {
-        var i = this._coordToIndex(x, y);
-        return _grid[i];
+        return _grid[y][x];
     }
 
     this.isMined = function(x, y) {
-        var i = this._coordToIndex(x, y);
-        return (_grid[i] & 16) != 0;
+        return (_grid[y][x] & 16) !== 0;
     }
 
     this.isFlagged = function(x, y) {
-        var i = this._coordToIndex(x, y);
-        return (_grid[i] & 32) != 0;
+        return (_grid[y][x] & 32) !== 0;
     }
 
     this.isRevealed = function(x, y) {
-        var i = this._coordToIndex(x, y);
-        return (_grid[i] & 128) != 0;
+        return (_grid[y][x] & 128) !== 0;
     }
 
     /**
@@ -45,34 +42,27 @@ function Minefield(width, height) {
      * location.
      */
     this.getNumber = function(x, y) {
-        var i = this._coordToIndex(x, y);
-        if ((_grid[i] & 64) == 0) return 0;
-        return (_grid[i] & 15);
+        if ((_grid[y][x] & 64) === 0) return 0;
+        return (_grid[y][x] & 15);
     }
 
     this.setMined = function(x, y, mined) {
-        var i = this._coordToIndex(x, y);
-        _grid[i] = (mined) ? _grid[i] | 16 : _grid[i] & ~16;
+        _grid[y][x] = (mined) ? _grid[y][x] | 16 : _grid[y][x] & ~16;
     }
 
     this.setFlagged = function(x, y, flagged) {
-        var i = this._coordToIndex(x, y);
-        _grid[i] = (flagged) ? _grid[i] | 32 : _grid[i] & ~32;
+        if (flagged !== this.isFlagged(x, y))
+            _numFlags += (flagged) ? 1 : -1;
+        _grid[y][x] = (flagged) ? _grid[y][x] | 32 : _grid[y][x] & ~32;
     }
 
     this.setRevealed = function(x, y, revealed) {
-        var i = this._coordToIndex(x, y);
-        _grid[i] = (revealed) ? _grid[i] | 128 : _grid[i] & ~128;
+        _grid[y][x] = (revealed) ? _grid[y][x] | 128 : _grid[y][x] & ~128;
     }
 
     this.setNumber = function(x, y, number) {
-        var i = this._coordToIndex(x, y);
-        _grid[i] &= 240; // Clear the four rightmost bits
-        _grid[i] |= ((number & 15) | 64);
-    }
-
-    this._coordToIndex = function(x, y) {
-        return y * width + x;
+        _grid[y][x] &= 240; // Clear the four rightmost bits
+        _grid[y][x] |= ((number & 15) | 64);
     }
 
 }
@@ -84,8 +74,8 @@ function GameCanvas(gameCanvas, gridCanvas, minefield, cellSize) {
  
     var _gameCanvas = gameCanvas;
     var _gridCanvas = gridCanvas;
-    var _gameContext = gameCanvas.getContext("2d");
-    var _gridContext = gridCanvas.getContext("2d");
+    var _gameContext = gameCanvas.getContext('2d');
+    var _gridContext = gridCanvas.getContext('2d');
     var _minefield = minefield;
     var _cellSize = cellSize;
 
@@ -148,7 +138,7 @@ function GameCanvas(gameCanvas, gridCanvas, minefield, cellSize) {
             } else {
                 this._fillColor(x, y, 'white');
                 var number = _minefield.getNumber(x, y);
-                if (number != 0)
+                if (number !== 0)
                     this._fillText(x, y, number, 'green');
             }
         } else if (_minefield.isFlagged(x, y)) {
@@ -177,6 +167,9 @@ function Swoopy(minefield, gameCanvas) {
     // -1 = lost, 0 = playing, 1 = won
     var _gameState = 0;
 
+    /**
+     * Resets the board and redistributes the mines randomly.
+     */
     this.resetBoard = function(numMines) {
         if (numMines > _minefield.getWidth() * _minefield.getHeight())
             return;
@@ -226,7 +219,8 @@ function Swoopy(minefield, gameCanvas) {
     }
 
     this.reveal = function(x, y) {
-        if (_minefield.isRevealed(x, y) || _minefield.isFlagged(x, y))
+        if (_gameState !== 0 || _minefield.isRevealed(x, y)
+                || _minefield.isFlagged(x, y))
             return;
 
         if (_minefield.isMined(x, y)) {
@@ -236,7 +230,7 @@ function Swoopy(minefield, gameCanvas) {
             return;
         }
 
-        if (_minefield.getNumber(x, y) == 0) {
+        if (_minefield.getNumber(x, y) === 0) {
             this._bfsReveal(x, y);
         } else {
             _minefield.setRevealed(x, y, true);
@@ -276,7 +270,7 @@ function Swoopy(minefield, gameCanvas) {
 
                 // Add adjacent cells to the end of the queue if current cell
                 // is blank
-                if (_minefield.getNumber(x, y) == 0) {
+                if (_minefield.getNumber(x, y) === 0) {
                     queue.push(x - 1, y - 1,
                                x - 1, y,
                                x - 1, y + 1,
@@ -297,7 +291,7 @@ function Swoopy(minefield, gameCanvas) {
 
         var flagged = _minefield.isFlagged(x, y);
 
-        if (!flagged && _minesLeft == 0) {
+        if (!flagged && _minesLeft === 0) {
             console.log('No mines left!');
             return;
         }
