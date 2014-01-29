@@ -159,15 +159,8 @@ function GameCanvas(gameCanvas, gridCanvas, minefield, cellSize) {
     }
 
     this.draw = function() {
-        // Clear the canvas
-        // _gameCanvas.width = _gameCanvas.width;
-
         _gameContext.fillStyle = 'grey';
         _gameContext.fillRect(0, 0, _gameCanvas.width, _gameCanvas.height);
-
-        // for (var i = 0; i < _minefield.getHeight(); i++)
-        //     for (var j = 0; j < _minefield.getWidth(); j++)
-        //         this.drawCell(j, i);
     }
 
 }
@@ -200,16 +193,13 @@ function Swoopy(minefield, gameCanvas) {
                 continue;
 
             _minefield.setMined(x, y, true);
-            console.log('Adding mine at: ' + x + ' ' + y);
             this._mapToAdjacentCells(x, y, this._incrementMineNumber);
             leftToDistribute--;
-            console.log();
         }
     }
 
     /**
-     * Updates the mine numbers of the adjacent cells.
-     * TODO: Should this be located in Minefield instead?
+     * Applies the function f to the adjacent cells of (x, y).
      */
     this._mapToAdjacentCells = function(x, y, f) {
         f(x - 1, y - 1);
@@ -222,6 +212,10 @@ function Swoopy(minefield, gameCanvas) {
         f(x + 1, y + 1);
     }
 
+    /**
+     * Increments the number of a cell by one.
+     * TODO: Should this be handled by Minefield instead?
+     */
     this._incrementMineNumber = function(x, y) {
         if (x < 0 || x >= _minefield.getWidth()
                 || y < 0 || y >= _minefield.getHeight())
@@ -229,7 +223,6 @@ function Swoopy(minefield, gameCanvas) {
 
         var n = _minefield.getNumber(x, y);
         _minefield.setNumber(x, y, n + 1);
-        console.log('Incrementing number at: ' + x + ' ' + y);
     }
 
     this.reveal = function(x, y) {
@@ -237,7 +230,7 @@ function Swoopy(minefield, gameCanvas) {
             return;
 
         if (_minefield.isMined(x, y)) {
-            _minefield.setRevealed(x, y, true);
+            this.revealAll();
             _gameState = -1;
             _gameCanvas.drawCell(x, y);
             return;
@@ -248,6 +241,15 @@ function Swoopy(minefield, gameCanvas) {
         } else {
             _minefield.setRevealed(x, y, true);
             _gameCanvas.drawCell(x, y);
+        }
+    }
+
+    this.revealAll = function() {
+        for (var i = 0; i < _minefield.getHeight(); i++) {
+            for (var j = 0; j < _minefield.getWidth(); j++) {
+                _minefield.setRevealed(j, i, true);
+                _gameCanvas.drawCell(j, i);
+            }
         }
     }
 
@@ -271,7 +273,6 @@ function Swoopy(minefield, gameCanvas) {
                 // Reveal if not mined and not already revealed
                 _minefield.setRevealed(x, y, true);
                 _gameCanvas.drawCell(x, y);
-                // console.log('bfs revealing: ' + x + ' ' + y);
 
                 // Add adjacent cells to the end of the queue if current cell
                 // is blank
@@ -288,8 +289,6 @@ function Swoopy(minefield, gameCanvas) {
                 }
             }
         }
-
-        console.log('bfs complete!');
     }
 
     this.flag = function(x, y) {
@@ -343,20 +342,15 @@ gridCanvas.onclick = function(event) {
     var cell = getCellFromEvent(event);
     var x = cell[0];
     var y = cell[1];
-
-    console.log('mouse down at: ' + x + ' ' + y);
     swoopy.reveal(x, y);
 }
 
 // Right click for flagging/unflagging
 gridCanvas.oncontextmenu = function(event) {
     event.preventDefault();
-
     var cell = getCellFromEvent(event);
     var x = cell[0];
     var y = cell[1];
-
-    console.log('right click at: ' + x + ' ' + y);
     swoopy.flag(x, y);
 }
 
