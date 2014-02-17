@@ -5,6 +5,16 @@ var config = {
     numMines: 10
 };
 
+var inputFields = {
+    width: document.getElementById('inputWidth'),
+    height: document.getElementById('inputHeight'),
+    numMines: document.getElementById('inputNumMines')
+};
+
+inputFields.width.value = config.width;
+inputFields.height.value = config.height;
+inputFields.numMines.value = config.numMines;
+
 var gameCanvas = document.getElementById('gameCanvas');
 var gridCanvas = document.getElementById('gridCanvas');
 
