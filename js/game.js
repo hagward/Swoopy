@@ -1,30 +1,45 @@
 var config = {
-    width: 10,
-    height: 10,
-    cellSize: 30,
-    numMines: 10
+    cellSize: 20,
+
+    modeEasy: {
+        width: 10,
+        height: 10,
+        numMines: 10
+    },
+
+    modeMedium: {
+        width: 20,
+        height: 10,
+        numMines: 50
+    },
+
+    modeExpert: {
+        width: 30,
+        height: 20,
+        numMines: 100
+    }
 };
 
-var inputFields = {
-    width: document.getElementById('inputWidth'),
-    height: document.getElementById('inputHeight'),
-    numMines: document.getElementById('inputNumMines')
+var buttons = {
+    easy: document.getElementById('buttonEasy'),
+    medium: document.getElementById('buttonMedium'),
+    expert: document.getElementById('buttonExpert')
 };
-
-inputFields.width.value = config.width;
-inputFields.height.value = config.height;
-inputFields.numMines.value = config.numMines;
 
 var gameCanvas = document.getElementById('gameCanvas');
 var gridCanvas = document.getElementById('gridCanvas');
 
-var minefield = new Minefield(config.width, config.height);
-var gameCanvas = new GameCanvas(gameCanvas, gridCanvas, minefield,
-        config.cellSize);
-var swoopy = new Swoopy(minefield, gameCanvas);
+var swoopy = initSwoopy(config.modeEasy.width, config.modeEasy.height,
+        config.modeEasy.numMines, gameCanvas, gridCanvas, config.cellSize);
 
-swoopy.resetBoard(config.numMines);
-gameCanvas.draw();
+function initSwoopy(width, height, numMines, gameCanvas, gridCanvas,
+        cellSize) {
+    var minefield = new Minefield(width, height);
+    var canvas = new GameCanvas(gameCanvas, gridCanvas, minefield, cellSize);
+    var swoopy = new Swoopy(minefield, canvas);
+    swoopy.resetBoard(numMines);
+    return swoopy;
+}
 
 // Left click for revealing
 gridCanvas.onclick = function(event) {
@@ -41,6 +56,23 @@ gridCanvas.oncontextmenu = function(event) {
     var x = cell[0];
     var y = cell[1];
     swoopy.flag(x, y);
+};
+
+buttons.easy.onclick = function(event) {
+    swoopy = initSwoopy(config.modeEasy.width, config.modeEasy.height,
+            config.modeEasy.numMines, gameCanvas, gridCanvas, config.cellSize);
+};
+
+buttons.medium.onclick = function(event) {
+    swoopy = initSwoopy(config.modeMedium.width, config.modeMedium.height,
+            config.modeMedium.numMines, gameCanvas, gridCanvas,
+            config.cellSize);
+};
+
+buttons.expert.onclick = function(event) {
+    swoopy = initSwoopy(config.modeExpert.width, config.modeExpert.height,
+            config.modeExpert.numMines, gameCanvas, gridCanvas,
+            config.cellSize);
 };
 
 /**

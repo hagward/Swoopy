@@ -2,6 +2,14 @@
  * Represents the visual minefield.
  */
 function GameCanvas(gameCanvas, gridCanvas, minefield, cellSize) {
+
+    var color = {
+        normal: 'black',
+        revealed: 'lightGrey',
+        flag: 'blue',
+        mine: 'red',
+        border: 'white'
+    };
  
     var _gameCanvas = gameCanvas;
     var _gridCanvas = gridCanvas;
@@ -12,13 +20,14 @@ function GameCanvas(gameCanvas, gridCanvas, minefield, cellSize) {
     _gameCanvas.width = _minefield.getWidth() * cellSize;
     _gameCanvas.height = _minefield.getHeight() * cellSize;
     _gameCanvas.style.marginLeft = (-_gameCanvas.width / 2) + 'px';
-    _gameContext.font = '20px sans-serif';
-    _gameCanvas.style.border = '2px solid black';
+    _gameCanvas.style.border = '1px solid black';
+    _gameContext.font = '10px Tahoma';
 
     _gridCanvas.width = _gameCanvas.width;
     _gridCanvas.height = _gameCanvas.height;
     _gridCanvas.style.marginLeft = _gameCanvas.style.marginLeft;
-    _gridCanvas.style.border = '2px solid black';
+    _gridCanvas.style.border = '1px solid black';
+    _gridContext.strokeStyle = color.border;
 
     var i;
 
@@ -66,22 +75,22 @@ function GameCanvas(gameCanvas, gridCanvas, minefield, cellSize) {
     this.drawCell = function(x, y) {
         if (_minefield.isRevealed(x, y)) {
             if (_minefield.isMined(x, y)) {
-                this._fillColor(x, y, 'red');
+                this._fillColor(x, y, color.mine);
             } else {
-                this._fillColor(x, y, 'white');
+                this._fillColor(x, y, color.revealed);
                 var number = _minefield.getNumber(x, y);
                 if (number !== 0)
                     this._fillText(x, y, number, 'green');
             }
         } else if (_minefield.isFlagged(x, y)) {
-            this._fillColor(x, y, 'blue');
+            this._fillColor(x, y, color.flag);
         } else {
-            this._fillColor(x, y, 'grey');
+            this._fillColor(x, y, color.normal);
         }
     };
 
     this.draw = function() {
-        _gameContext.fillStyle = 'grey';
+        _gameContext.fillStyle = color.normal;
         _gameContext.fillRect(0, 0, _gameCanvas.width, _gameCanvas.height);
     };
 

@@ -32,6 +32,8 @@ function Swoopy(minefield, gameCanvas) {
             this._mapToAdjacentCells(x, y, this._incrementMineNumber);
             leftToDistribute--;
         }
+
+        _gameCanvas.draw();
     };
 
     /**
@@ -90,7 +92,7 @@ function Swoopy(minefield, gameCanvas) {
         }
     };
 
-    this._bfsReveal = function(x, y) {
+    this._bfsReveal = function(x, y, animate) {
         // Push and pop two elements at the time
         var queue = [x, y];
 
