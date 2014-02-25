@@ -10,6 +10,17 @@ function GameCanvas(gameCanvas, gridCanvas, minefield, cellSize) {
         mine: 'red',
         border: 'white'
     };
+
+    var numberColors = [
+        'green',
+        'green',
+        'blue',
+        'blue',
+        'orange',
+        'orange',
+        'red',
+        'red'
+    ];
  
     var _gameCanvas = gameCanvas;
     var _gridCanvas = gridCanvas;
@@ -59,13 +70,16 @@ function GameCanvas(gameCanvas, gridCanvas, minefield, cellSize) {
     };
 
     /**
-     * Writes text to the center of a cell.
+     * Writes a number to the center of a cell in its proper color.
      */
-    this._fillText = function(x, y, text, color) {
-        _gameContext.fillStyle = color;
-        _gameContext.fillText(text,
-                x * cellSize + 9,
-                y * cellSize + 22);
+    this._fillNumber = function(x, y, number) {
+        if (number < 1 || number > 8)
+            return;
+
+        _gameContext.fillStyle = numberColors[number];
+        _gameContext.fillText(number,
+                x * cellSize + 8,
+                y * cellSize + 14);
     };
 
     /**
@@ -80,7 +94,7 @@ function GameCanvas(gameCanvas, gridCanvas, minefield, cellSize) {
                 this._fillColor(x, y, color.revealed);
                 var number = _minefield.getNumber(x, y);
                 if (number !== 0)
-                    this._fillText(x, y, number, 'green');
+                    this._fillNumber(x, y, number);
             }
         } else if (_minefield.isFlagged(x, y)) {
             this._fillColor(x, y, color.flag);
